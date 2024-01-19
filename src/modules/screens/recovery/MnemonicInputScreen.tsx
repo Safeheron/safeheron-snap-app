@@ -201,6 +201,7 @@ const styles = StyleSheet.create({
     flex: 1,
     verticalAlign: 'top',
     fontSize: 14,
+    color: colors.text.primary,
   },
 });
 
