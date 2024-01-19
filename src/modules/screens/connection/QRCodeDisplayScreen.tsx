@@ -1,8 +1,8 @@
 import {ScreenProps} from '@/types/navigation.types';
-import React, {FC, useEffect, useLayoutEffect, useMemo} from 'react';
+import React, {FC, useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import {useAndroidBackHandler} from '@/modules/hooks/BackHandler.android';
 import {Pressable} from 'react-native';
-import {colors, Text} from '@/modules/components';
+import {Box, colors, Text} from '@/modules/components';
 import {useKeepAwake} from '@sayem314/react-native-keep-awake';
 import {WorkFlowPrepareParams} from '@/service/mpc/flow/BaseWorkFlow';
 import logger from '@/service/logger/logger';
@@ -10,11 +10,16 @@ import app from '@/service/app/App';
 import Flex from '../../components/primitives/flex/Flex';
 import DynamicQRCode from '@/modules/components/primitives/qrcode/DynamicQRCode';
 import useMPCFlow from '@/service/mpc/hooks/useMPCFlow';
+import useWebRTC from '@/service/webrtc/useWebRTC';
+import {RTC_EVENT_CHANNEL_OPENED} from '@/service/webrtc/RTCPeer';
+import Spinner from '@/modules/components/primitives/spinner/Spinner';
 
 export const QRCodeDisplayScreen: FC<ScreenProps<'QRCodeDisplayScreen'>> = ({navigation, route}) => {
   const {sdpICE, flowType} = route.params;
   useAndroidBackHandler(() => true);
   useKeepAwake();
+  let [rtcPeer] = useWebRTC();
+  const [rtcConnected, setRtcConnected] = useState(false);
 
   const [mpcFlow, manuallyCancel, _] = useMPCFlow(navigation, flowType);
 
@@ -52,13 +57,17 @@ export const QRCodeDisplayScreen: FC<ScreenProps<'QRCodeDisplayScreen'>> = ({nav
     }
   };
 
+  const onRtcChannelOpened = () => setRtcConnected(true);
+
   useEffect(() => {
+    const rtcChannelOpenListener = rtcPeer.on(RTC_EVENT_CHANNEL_OPENED, onRtcChannelOpened);
     const prepareListener = mpcFlow.on('prepare', onPrepare);
 
     // bind message handler
     mpcFlow.start();
 
     return () => {
+      rtcChannelOpenListener.off(RTC_EVENT_CHANNEL_OPENED, onRtcChannelOpened);
       prepareListener.off('prepare', onPrepare);
     };
   }, []);
@@ -80,23 +89,35 @@ export const QRCodeDisplayScreen: FC<ScreenProps<'QRCodeDisplayScreen'>> = ({nav
 
   return (
     <Flex align={'center'} px={46}>
-      <Text mt={57} mb={40} blod align={'center'} lineHeight={25} fontSize={16}>
-        Place the QR code in front of {'\n'} your desktop’s camera
-      </Text>
-      <Flex
-        style={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: 249,
-          height: 249,
-          borderWidth: 1,
-          borderColor: colors.board.primary,
-        }}>
-        <DynamicQRCode value={qrCodeData} size={222} />
-      </Flex>
-      <Text fontSize={14} mt={30} lineHeight={20} align={'center'}>
-        No centralized server, peer-to-peer connection between mobile phone and website.
-      </Text>
+      {rtcConnected && (
+        <Box border={false} padding={[130, 0, 0, 0]}>
+          <Spinner size={'large'} />
+          <Text mt={20} fontSize={16}>
+            Connecting
+          </Text>
+        </Box>
+      )}
+      {!rtcConnected && (
+        <>
+          <Text mt={57} mb={40} blod align={'center'} lineHeight={25} fontSize={16}>
+            Place the QR code in front of {'\n'} your desktop’s camera
+          </Text>
+          <Flex
+            style={{
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: 249,
+              height: 249,
+              borderWidth: 1,
+              borderColor: colors.board.primary,
+            }}>
+            <DynamicQRCode value={qrCodeData} size={222} />
+          </Flex>
+          <Text fontSize={14} mt={30} lineHeight={20} align={'center'}>
+            No centralized server, peer-to-peer connection between mobile phone and website.
+          </Text>
+        </>
+      )}
     </Flex>
   );
 };

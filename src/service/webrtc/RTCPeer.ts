@@ -25,6 +25,7 @@ export interface SignalingDataFromWeb {
 export const RTC_EVENT_DISCONNECTED = 'onDisconnected';
 export const RTC_EVENT_ONMESSAGE = 'onMessage';
 export const RTC_EVENT_ICE_READY_EVENT = 'onIceGatheringComplete';
+export const RTC_EVENT_CHANNEL_OPENED = 'onPeerConnected';
 
 class RTCPeer extends EventEmitter2 {
   private pc?: RTCPeerConnection;
@@ -88,6 +89,7 @@ class RTCPeer extends EventEmitter2 {
       });
     }
     logger.webrtc.debug('dataChannel created.');
+    this.emit(RTC_EVENT_CHANNEL_OPENED);
   }
 
   private onChannelOpen() {
