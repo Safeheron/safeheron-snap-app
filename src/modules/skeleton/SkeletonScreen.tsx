@@ -53,6 +53,7 @@ const SkeletonScreen: FC<Props> = ({screens}) => {
           />
         )}
         <RootStack.Navigator
+          detachInactiveScreens={false}
           screenOptions={{
             headerShadowVisible: false,
             headerLeft: BackButton,
